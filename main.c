@@ -9,8 +9,8 @@
 int main()
 {
   Boolean rc;
-  int *ia;
-  char *ca1, *ca2, *ca3, *ca4;
+  //int *ia;
+  //char *ca1, *ca2, *ca3, *ca4;
   char *fail;
   
   rc = rinit("hello", 1024);
@@ -22,41 +22,41 @@ int main()
   
   rc = rchoose("hello");
   assert(rc);
-  ia = ralloc(sizeof(int) * 32);
-  printf("Size: %d\n", rsize(ia)); // 128
-  ca1 = ralloc(256);
-  assert(NULL != ca1);
-  ca2 = ralloc(384);
-  assert(NULL != ca2);
-  fail = ralloc(384); // not enough memory
-  assert(NULL == fail);
-  rc = rfree(ca1);
-  assert(rc);
-  fail = ralloc(384); // not enough contiguous memory
-  assert(NULL == fail);
-  rc = rfree(ia);
-  assert(rc);
-  ca3 = ralloc(384); // now there's enough memory
-  assert (NULL != ca3);
+  // ia = ralloc(sizeof(int) * 32);
+  // printf("Size: %d\n", rsize(ia)); // 128
+  // ca1 = ralloc(256);
+  // assert(NULL != ca1);
+  // ca2 = ralloc(384);
+  // assert(NULL != ca2);
+  // fail = ralloc(384); // not enough memory
+  // assert(NULL == fail);
+  // rc = rfree(ca1);
+  // assert(rc);
+  // fail = ralloc(384); // not enough contiguous memory
+  // assert(NULL == fail);
+  // rc = rfree(ia);
+  // assert(rc);
+  // ca3 = ralloc(384); // now there's enough memory
+  // assert (NULL != ca3);
   
-  rc = rchoose("world");
-  assert(rc);
-  ca4 = ralloc(796);
-  assert(NULL != ca4);
-  printf("Size: %d\n", rsize(ca4)); // 800
+  // rc = rchoose("world");
+  // assert(rc);
+  // ca4 = ralloc(796);
+  // assert(NULL != ca4);
+  // printf("Size: %d\n", rsize(ca4)); // 800
   
-  rdump(); // hello & world
+  // rdump(); // hello & world
   
-  rdestroy("hello");
+  // rdestroy("hello");
   
-  rc = rfree(ca4 + 24); // not the start of the block
-  assert(!rc);
-  rc = rfree(ca4); // better!
-  assert(rc);
+  // rc = rfree(ca4 + 24); // not the start of the block
+  // assert(!rc);
+  // rc = rfree(ca4); // better!
+  // assert(rc);
   
-  rdestroy("world");
+  // rdestroy("world");
 
-  rdump(); // nothing
+  // rdump(); // nothing
 
   fprintf(stderr,"\nEnd of processing.\n");
 

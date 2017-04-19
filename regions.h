@@ -14,4 +14,6 @@ Boolean rfree(void *block_ptr);
 void rdestroy(const char *region_name);
 void rdump();
 
+//======Added prototypes===========
+Boolean search(const char*region_name);
 #endif
