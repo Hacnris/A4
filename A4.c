@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include "table.h"
 /*
 create and initialize a region with a given name and givn size.size>0 return false on error. call rchoose() if success
 */
@@ -11,6 +12,7 @@ struct TABLE_REGIONS
 	void *pointer = NULL;
 	const char * name = NULL;
 	r_size_t size;
+	table_r *next;
 };
 typedef struct FREE_REGIONS table_f;
 struct FREE_REGIONS
@@ -37,20 +39,50 @@ Boolean rinit(const char * region_name, r_size_t region_size)
 {
 	Boolean result = false;
 	table_r newRegion;
-	table_b newBlock;
+	table_b newBlock = malloc(sizeof(table_b));
+	if(newBlock!=NULL)
+	{
+		assert(newBlock!=NULL);
+		topblock = newBlock;
+		assert(topblock = newBlock);
+	}
 	topregion = malloc(sizeof(newRegion));
 	if(topregion!=NULL)
 	{
+		assert(topregion!=NULL);
 		if(region_size>0)
 		{
-			newBlock.pointer = malloc(region_size);
-			if(newBlock.pointer!=NULL)
+			topblocks = malloc(sizeof(region_size));
+			topfree = topblocks;
+			newBlock->start = topblocks;
+			if(topblocks==NULL)
 			{
-				newBlock.name = region_name;
-				newBlock.size = region_size;
-				newBlock.end = (char*) newBlock->end +newBlock.size;
-				newBlock.next = NULL;
+				newRegion->name = region_name;
+				newRegion.size = region_size;
+				newRegion->end = (char*) newBlock->end +newBlock.size;
+				newRegion->next = NULL;
+				chooseptr = newRegion;
+				Boolean confirm = rchoose(region_name);
 				result = true;
+			}
+			else
+			{
+				table_r temp = NULL;
+				table_r curr = topregion;
+				while(curr!=NULL)
+				{
+					temp = curr;
+					curr = curr->next;
+				}
+				if(curr == NULL)
+				{
+					temp->next = newRegion;
+					newRegion->name = region_name;
+					newRegion.size = region_size;
+					newRegion->end = (char*) newBlock->end +newBlock.size;
+					newRegion->next = NULL;
+					result = true;
+				}
 			}
 		}
 	}
@@ -62,7 +94,14 @@ choose a previously-ini mem region for subsequent, ralloc, rsize, and rfree call
 */
 Boolean rchoose(const char*region_name)
 {
-	
+	Boolean result = false;
+	if(strcmp(chooseptr->name, region_name) == 0)
+		result = true;
+	else
+	{
+		result = search(region_name);
+	}
+	return result;
 }
 void ralloc(r_size_t block_size)
 {
@@ -79,4 +118,22 @@ void rdestroy(const char *region_name)
 void rdump()
 {
 	
+}
+Boolean search(const char*region_name)
+{
+	Boolean result = false;
+	table_r * curr = topregion;
+	while(curr!= NULL && strcmp(curr->name, region_name)!= 0)
+	{
+		curr = curr->next;
+	}
+	if(curr == NULL)
+		printf("Search failed! Could not find \"%s\".", region_name);
+	else if(strcmp(curr->name, region_name)== 0 && curr != NULL)
+	{
+		assert(curr != NULL);
+		assert(strcmp(curr->name, region_name)== 0);
+		result = true;
+	}
+	return result;
 }
