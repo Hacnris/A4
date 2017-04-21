@@ -39,7 +39,7 @@ int size = 0;
 Boolean rinit(const char * region_name, r_size_t region_size)
 {
 	Boolean result = false;
-	table_r *newRegion = NULL;
+	table_r *newRegion;
 	table_b *newBlock = (table_b*)malloc(sizeof(table_b));
 	if(newBlock!=NULL)
 	{
@@ -48,10 +48,8 @@ Boolean rinit(const char * region_name, r_size_t region_size)
 		assert(topblocks = newBlock);
 	}
 	newRegion = (table_r*)malloc(sizeof(newRegion));
-	topregion = newRegion;
 	if(newRegion!=NULL)
 	{
-		assert(topregion!=NULL);
 		assert(newRegion != NULL);
 		if(region_size>0)
 		{
@@ -71,10 +69,10 @@ Boolean rinit(const char * region_name, r_size_t region_size)
 			}
 			else
 			{
-				table_r * curr = topregion;
+				table_r * temp = topregion;
+				newRegion->next = temp;
 				topregion = newRegion;
 				chooseptr = topregion;
-				topregion->next = curr;
 				result = true;
 				size++;
 			}
@@ -89,22 +87,28 @@ choose a previously-ini mem region for subsequent, ralloc, rsize, and rfree call
 Boolean rchoose(const char*region_name)
 {
 	Boolean result = false;
-	printf("size:%d\n", size);
-	table_r * curr = topregion;
-	while(curr!=NULL && (strcmp(curr->name,region_name)!=0))
+	if(strcmp(region_name,rchosen())== 0)
 	{
-		printf("%s\n", curr->name);
-		curr = curr->next;
-	}
-	printf("after:%s\n", curr->name);
-	if(curr!=NULL && (strcmp(curr->name,region_name)==0))
-	{
-		chooseptr = curr;
 		result = true;
 	}
-	else if(curr == NULL&&(strcmp(curr->name,region_name)!=0))
+	else
 	{
-		printf("SOMETHING WENT WRONG TRAVERSING\n");
+		table_r * curr = topregion;
+		while(curr!=NULL && strcmp(curr->name, region_name)!=0)
+		{
+			curr = curr->next;
+		}
+		if(curr!=NULL && strcmp(curr->name, region_name)==0)
+		{
+			assert(curr!= NULL);
+			assert(strcmp(curr->name, region_name)==0);
+			result = true;
+		}
+		else if(curr == NULL && strcmp(curr->name, region_name)==0)
+		{
+			printf("Something went wrong with searching!\n");
+		}
+
 	}
 	return result;
 }
@@ -114,7 +118,9 @@ const char * rchosen()
 }
 void *ralloc(r_size_t block_size)
 {
+	unsigned char* freeStart = topfree;
 	
+	for(int i = 0; )
 }
 Boolean rfree(void *block_ptr)
 {
