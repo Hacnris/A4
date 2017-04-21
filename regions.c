@@ -52,27 +52,29 @@ Boolean rinit(const char * region_name, r_size_t region_size)
 	if(newRegion!=NULL)
 	{
 		assert(topregion!=NULL);
+		assert(newRegion != NULL);
 		if(region_size>0)
 		{
-			topblocks = malloc(sizeof(region_size));
-			topfree = (table_b*)topblocks;
+			topblocks = (table_b*)malloc(sizeof(region_size));
+			assert(topblocks!=NULL);
+			topfree = topblocks;
 			newBlock->start = topblocks;
 			newRegion->name = region_name;
 			newRegion->size = region_size;
 			newRegion->next = NULL;
 			if(topregion==NULL)
 			{
-				table_r * curr = topregion;
 				topregion = newRegion;
 				chooseptr = topregion;
-				topregion->next = curr;
 				result = true;
 				size++;
 			}
 			else
 			{
+				table_r * curr = topregion;
 				topregion = newRegion;
 				chooseptr = topregion;
+				topregion->next = curr;
 				result = true;
 				size++;
 			}
