@@ -6,30 +6,7 @@
 /*
 create and initialize a region with a given name and givn size.size>0 return false on error. call rchoose() if success
 */
-typedef struct FREE_REGIONS table_f;
-struct FREE_REGIONS
-{
-	void *start;
-	int diff;
-	table_f *next;
-};
-typedef struct REGION_BLOCKS table_b;
-struct REGION_BLOCKS
-{
-	void *start;
-	r_size_t size;
-	void *end;// how to calculate it?
-	table_b *next;
-};
-typedef struct TABLE_REGIONS table_r;
-struct TABLE_REGIONS
-{
-	const char * name;
-	r_size_t size;
-	table_r *next;
-	table_b * topBlocks;
-	table_f * topFree;
-};
+
 
 
 table_r *topregion = NULL;
@@ -200,6 +177,7 @@ Boolean rfree(void *block_ptr)
 	Boolean result = false;
 	table_b * curr = chooseptr->topBlocks;
 	table_b * prev = NULL;
+
 	while(curr != NULL && (block_ptr!= curr->start))
 	{
 		prev = curr;
@@ -207,27 +185,7 @@ Boolean rfree(void *block_ptr)
 	}
 	if(curr!=NULL&&(block_ptr== curr->start) )//when we find the buffer we want to delete
 	{
-		table_f* newFree = (table_f*) malloc( sizeof(table_f));//creates index of location for next free region;
-		assert(newFree != NULL);// checks if malloc allocated properly
-		assert(curr->size>0);
-		newFree->diff = curr->size;//stores the size of freed memory into newFree
-		assert(newFree->diff == curr->size);
-		//////////////////////////////////////////////
-		if(chooseptr->topFree == NULL)//if free index list is empty
-		{
-			assert(newFree !=NULL);
-			chooseptr->topFree = newFree; //have topFree point to newFree
-		}
-		else//when has something in it add it to the top of the list.
-		{
-			assert(newFree!=NULL);
-			assert(chooseptr->topFree!=NULL);
-			table_f *temp = chooseptr->topFree;//takes the current top Node and stores in temp
-			newFree->next = temp;//takes thew newFree and links it above current Free Node.
-			chooseptr->topFree = newFree;//takes the topFree pointer and points it to newFree
-
-		}
-		
+		addFree(curr);
 		prev = curr->next;//takes previous node from block list and links around current node
 		assert(prev = curr->next);//checks to see if linked properly.
 		free(curr);//free's the malloced memory/Node
@@ -240,7 +198,7 @@ void rdestroy(const char *region_name)
 {
 	// table_r *curr = topregion;
 	// assert(topregion!=NULL);
-	
+
 }
 void rdump()
 {
@@ -261,4 +219,31 @@ r_size_t roundup(r_size_t size)
 		}
 	}
 	return size;
+}
+Boolean addFree(table_b *curr)
+{
+	Boolean result = false;
+	table_f* newFree = (table_f*) malloc( sizeof(table_f));//creates index of location for next free region;
+	assert(newFree != NULL);// checks if malloc allocated properly
+	assert(curr->size>0);
+	newFree->diff = curr->size;//stores the size of freed memory into newFree
+	assert(newFree->diff == curr->size);
+	if(chooseptr->topFree == NULL)//if free index list is empty
+	{
+		assert(newFree !=NULL);
+		chooseptr->topFree = newFree; //have topFree point to newFree.
+		assert(chooseptr->topFree == newFree);
+		result = true;
+	}
+	else//when has something in it add it to the top of the list.
+	{
+		assert(newFree!=NULL);
+		assert(chooseptr->topFree!=NULL);
+		table_f *temp = chooseptr->topFree;//takes the current top Node and stores in temp
+		newFree->next = temp;//takes thew newFree and links it above current Free Node.
+		chooseptr->topFree = newFree;//takes the topFree pointer and points it to newFree
+		assert(chooseptr->topFree == newFree);
+		result = true;
+	}
+	return result;
 }
