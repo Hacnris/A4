@@ -44,4 +44,6 @@ struct TABLE_REGIONS
 Boolean search(const char*region_name);
 r_size_t roundup(r_size_t size);
 Boolean addFree(table_b *curr);
+Boolean destroyFree(table_f *top);
+Boolean destroyBlocks(table_b* top);
 #endif
