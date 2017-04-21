@@ -13,6 +13,7 @@ r_size_t rsize(void *block_ptr);
 Boolean rfree(void *block_ptr);
 void rdestroy(const char *region_name);
 void rdump();
+r_size_t roundup(r_size_t size);
 
 //======Added prototypes===========
 Boolean search(const char*region_name);
