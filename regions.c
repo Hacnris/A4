@@ -4,7 +4,14 @@
 #include <assert.h>
 #include "regions.h"
 /*
-create and initialize a region with a given name and givn size.size>0 return false on error. call rchoose() if success
+NAME: HARRIS CHENG
+STUDENT #: 7739629
+COURSE: COMP 2160, SECTION A01
+INSTRUCTOR: FRANK BRISTOW
+ASSIGNMENT: 4
+
+PURPOSE: LEARNING TO CONTROL MEMORY ALLOCATION, AND MANAGING DATA STRUCTURE THAT WE CREATE
+
 */
 
 
@@ -13,7 +20,12 @@ table_r *topregion = NULL;
 table_r *chooseptr = NULL;
 int size = 0;
 
-
+/*
+Creates takes in region size and name. Creates a Node that store the size, name. mallocs the desired region
+and stores it into an unsigned pointer as the start point of the region. the start point is then added by the
+the size in which is saved as an unsigned char as the end point. Keeps a top pointer and a linked list 
+saved in the Node as well as the size of the block link list and the remaining memory left.
+*/
 Boolean rinit(const char * region_name, r_size_t region_size)
 {
 	Boolean result = false;
@@ -60,7 +72,11 @@ Boolean rinit(const char * region_name, r_size_t region_size)
 	return result;
 }
 /*
-choose a previously-ini mem region for subsequent, ralloc, rsize, and rfree calls. return false on error.
+RCHOOSE
+============
+STARTS WITH THE TOP POINTER FOR THE REGIONS LINKED LIST AND ITERATES THROUGHT THE LIST UNTIL IT CAN
+FIND THE REGION THAT HAS THE SAME NAME WE ARE SEARCHING FOR. RETURNS A BOOLEAN TRUE IF FOUND OR REMAINS
+AND RETURNS FALSE;
 */
 Boolean rchoose(const char*region_name)
 {
@@ -90,12 +106,26 @@ Boolean rchoose(const char*region_name)
 	}
 	return result;
 }
+/*
+RCHOSEN()
+=========
+RETURNS A POINTER TO THE NAME OF THE CURRENTLY SELECTED MEMORY REGION
+*/
 const char * rchosen()
 {
 	assert(chooseptr!=NULL);
 	return chooseptr->name;
 }
-
+/*
+TAKES IN A TYPE SHORT BLOCKSIZE OF BYTES WE NEED TO ALLOCATE. FIRST DETERMINES IF 
+BLOCK SIZE NEEDS TO BE ROUNDED UP AND THEN IS CHECKED IF THE SIZE OF THE BLOCK IS VALID TO
+ALLOCATE WITHIN THE REGION BY CHECKING THE REGION'S REMAINING SIZE. IF SUFFICIENT NEW BLOCK STORES 
+THE SIZE, STARTING BUFFER AND ENDING BUFFER FOR LATER CALCULATIONS TO DETERMINE IF THERE IS A GAP
+BETWEEN THE DIFFERENT BLOCKS AND WHERE(IF IT CAN) ALLOCATE A NEW BLOCK.
+RETURNS NULL ON FAILURE AND A POINTER TO THE START OF THE BLOCK ON SUCCESS.
+CAVEAT: POINTER ARITHMETIC NOT WORKING. COULDN'T COMPARE THE DISTANCE BETWEEN ALLOCATED BLOCKS AND
+BLOCKSIZE FOR APPROPRIATE ALLOCATION.
+*/
 void *ralloc(r_size_t block_size)
 {
 	assert(block_size !=0);//check block size is not 0
@@ -104,6 +134,11 @@ void *ralloc(r_size_t block_size)
 	assert(newBlock !=NULL);
 	if(block_size !=0)// check if block_size is greater does no equal zero
 	{
+		if(block_size%8!=0)
+		{
+			block_size = roundup(block_size);
+			assert(block_size>=0);
+		}
 		if(block_size>0 && block_size < chooseptr->remaining)//check if block_size is not a negative number
 		{
 			assert(block_size>0);
@@ -111,7 +146,6 @@ void *ralloc(r_size_t block_size)
 
 			if(chooseptr->remaining == chooseptr->size)//condition if no memory used
 			{
-				printf("Number 1\n");
 				newBlock->start = chooseptr->start;//starting buffer in new region or empty region
 				zeroOut(block_size, chooseptr->start);//zeroes out memory up to block size
 				newBlock->size = block_size;//saves the block size
@@ -125,7 +159,6 @@ void *ralloc(r_size_t block_size)
 			{
 				assert(chooseptr->sizeb ==1);
 				assert(chooseptr->sizeb>=0);
-				printf("Number2\n");
 				table_b * curr = chooseptr->topBlocks;//temp store to be linked later
 				newBlock->start = curr->end;//newBlock start == end of the first node;
 				assert(newBlock->start!=NULL);
@@ -143,14 +176,12 @@ void *ralloc(r_size_t block_size)
 			}
 			else
 			{
-				printf("Number3\n");
 				table_b* curr = chooseptr->topBlocks;
 				table_b* after = curr->next;
 				unsigned int diff = 0;
 				if(curr!=NULL && after !=NULL)
 				{
 					diff = curr->start-after->end;
-					printf("diff1:%u\n", diff);
 				}
 
 				while((curr!=NULL && after!=NULL) && block_size>diff)
@@ -158,15 +189,12 @@ void *ralloc(r_size_t block_size)
 					curr = curr->next;
 					after = after->next;
 					diff = curr->start-after->end;
-					printf("NODE SIZE: %d\n", curr->size);
-					printf("diff:%u\n", diff);
 				}
 				if((curr!=NULL && after==NULL))//if at the end of the list and remaining memory can store block
 				{
 					unsigned int endDiff = chooseptr->end -curr->end;
 					if(block_size<endDiff)
 					{
-						printf("END TAIL\n");
 						assert(curr!=NULL);
 						table_b * temp = curr;
 						newBlock->start = curr->end;
@@ -186,7 +214,6 @@ void *ralloc(r_size_t block_size)
 				}
 				else if((curr!=NULL && after!=NULL) && (block_size<=diff))//if there is gap big enough to store block do so
 				{
-					printf("GAP INSERT\n");
 
 					assert(diff>0);
 					assert(curr !=NULL);
@@ -215,6 +242,13 @@ void *ralloc(r_size_t block_size)
 	}
 	return result;
 }
+/*
+RSIZE()
+=====
+TAKES IN A BLOCK POINTER IN WHICH WE USE THE BLOCK LIST AND ITERATE THROUGH IT AND COMPARE IF THE START
+POINTER IS THE SAME AS THE ONE GIVEN. IF SO WE SET THE RESULT TO EQUAL THE SIZE OF THE LOCATED BLOCK
+AND RETURN THE SIZE OF THE ALLOCATED BLOCK.
+*/
 r_size_t rsize(void *block_ptr)
 {
 	table_b * curr = chooseptr->topBlocks;//takes temp pointer to interate through list
@@ -231,9 +265,14 @@ r_size_t rsize(void *block_ptr)
 		assert(result >0);
 	}
 	assert(result >=0);//check if returning actual size and no overrun number
-	printf("RETURNING SIZE: %d", result);
 	return result;
 }
+/*
+RFREE()
+=====
+TAKES IN A BLOCK POINTER WHERE WE AGAIN ITERATE THROUGH THE BLOCK LIST AND FIND THE RIGHT BLOCK THROUGH
+ITS STARTING POINTER. THE FUNCTION THEN DETERMINES HOW TO FREE THE MEMORY AND RELINK THE LIST TOGETHER.
+*/
 Boolean rfree(void *block_ptr)
 {
 	Boolean result = false;
@@ -266,6 +305,13 @@ Boolean rfree(void *block_ptr)
 	return result;
 
 }
+/*
+RDESTROY()
+==============
+TAKES IN A REGION NAME IN WHICH WE USE TO COMPARE AS WE INTERATE THROUGHT THE REGION LIST AND FIND THE 
+DESIRED REGION WITH THE SAME NAME. WE THEN PROCEDD TO DESTROY ANY MEMORY ASSOCIATED WITH THE REGION AND DETERMINE
+HOW TO RELINK THE REGION LIST AGAIN.
+*/
 void rdestroy(const char *region_name)
 {
 	Boolean blockList = false;
@@ -304,6 +350,11 @@ void rdestroy(const char *region_name)
 	}
 
 }
+/*
+RDUMP()
+===========
+GOES THROUGH THE DATA STRUCTURE AND PRINT OFF ALL THE INFO OF ALL THE REGIONS IN THE PROGRAM.
+*/
 void rdump()
 {
 	table_r * curr = topregion;
@@ -323,6 +374,11 @@ void rdump()
 	}
 
 }
+/*
+ROUNDUP()
+====================
+TAKES IN A SIZE WHATEVER IT IS FOR AND ROUNDS IT UP MULTIPLE OF 8.
+*/
 r_size_t roundup(r_size_t size)
 {
 	assert(size>0);
@@ -341,7 +397,11 @@ r_size_t roundup(r_size_t size)
 	return size;
 }
 
-
+/*
+DESTROYBLOCKS()
+======================
+ITERATES THROUGH THE BLOCK LIST AND FREE'S THE LIST
+*/
 Boolean destroyBlocks(table_b * top)
 {
 	Boolean result = false;
@@ -359,7 +419,11 @@ Boolean destroyBlocks(table_b * top)
 	}
 	return result;
 }
-
+/*
+ZEROOUT()
+===============
+TAKES THE SIZE AND THE STARTING POINTER OF THE BLOCK AND ZEROES OUT THE MEMORY FOR ALLOCATION.
+*/
 void zeroOut(r_size_t size,unsigned char * start)
 {
 	assert(size>0);
