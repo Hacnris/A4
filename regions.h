@@ -17,33 +17,28 @@ void rdump();
 
 //======Added prototypes===========
 
-typedef struct FREE_REGIONS table_f;
-struct FREE_REGIONS
-{
-	void *start;
-	int diff;
-	table_f *next;
-};
 typedef struct REGION_BLOCKS table_b;
 struct REGION_BLOCKS
 {
-	void *start;
+	unsigned char *start;
 	r_size_t size;
-	void *end;// how to calculate it?
+	unsigned char *end;
 	table_b *next;
 };
 typedef struct TABLE_REGIONS table_r;
 struct TABLE_REGIONS
 {
 	const char * name;
+	unsigned char * start;
+	unsigned char * end;
 	r_size_t size;
+	r_size_t remaining;
 	table_r *next;
 	table_b * topBlocks;
-	table_f * topFree;
+	int sizeb;
 };
 Boolean search(const char*region_name);
 r_size_t roundup(r_size_t size);
-Boolean addFree(table_b *curr);
-Boolean destroyFree(table_f *top);
 Boolean destroyBlocks(table_b* top);
+void zeroOut(r_size_t size, unsigned char * start);
 #endif

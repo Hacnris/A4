@@ -21,8 +21,6 @@ Boolean rinit(const char * region_name, r_size_t region_size)
 	{
 		assert(region_size >0);
 		table_r *newRegion;
-		assert(newBlock != NULL);//check if malloc worked.
-		assert(newFree != NULL);
 		newRegion = (table_r*)malloc(sizeof(newRegion));// create region to store info
 		assert(newRegion!=NULL);//check if malloc of newRegions worked
 		if(newRegion!=NULL)//Condition of malloc of Region
@@ -34,11 +32,12 @@ Boolean rinit(const char * region_name, r_size_t region_size)
 				region_size = roundup(region_size);
 				assert(region_size>=0);
 				newRegion->start = malloc(region_size);//allocate the region_size and send it to the start point of newBLocks and free
-				assert(newBlock->start!=NULL);//checks if the allocation works or not
+				assert(newRegion->start!=NULL);//checks if the allocation works or not
 				newRegion->name = region_name;//stores special region name for searching
 				newRegion->size = region_size;//stores the size of the region  allocation
 				newRegion->remaining = region_size;//stores memory updater
-				newRegion->end = (char*)newRegion->start + region_size;
+				newRegion->end = newRegion->start + region_size;
+				newRegion->sizeb = 0;
 				if(topregion==NULL)//if list is empty just point to the new Region Node
 				{
 					topregion = newRegion;
@@ -101,7 +100,7 @@ void *ralloc(r_size_t block_size)
 {
 	assert(block_size !=0);//check block size is not 0
 	void * result= NULL;//defaul result if we do not allocate correctly
-	table_b newBlock = malloc(sizeof(table_b));
+	table_b *newBlock = malloc(sizeof(table_b));
 	assert(newBlock !=NULL);
 	if(block_size !=0)// check if block_size is greater does no equal zero
 	{
@@ -112,47 +111,58 @@ void *ralloc(r_size_t block_size)
 
 			if(chooseptr->remaining == chooseptr->size)//condition if no memory used
 			{
+				printf("Number 1\n");
 				newBlock->start = chooseptr->start;//starting buffer in new region or empty region
 				zeroOut(block_size, chooseptr->start);//zeroes out memory up to block size
 				newBlock->size = block_size;//saves the block size
-				newBlock->end = (char*)newBlock->start + size;//end point buffer for further calc
-				topBlocks = newBlock;//changes top to point to new block
+				newBlock->end =newBlock->start + size;//end point buffer for further calc
+				chooseptr->topBlocks = newBlock;//changes top to point to new block
 				chooseptr->remaining -=block_size;//updates remaining memory
+				chooseptr->sizeb++;
 				result = newBlock->start;
 			}
-			else if(chooseptr->topBlocks->next== NULL)//if there is only 1 Node
+			else if(chooseptr->sizeb==1)//if there is only 1 Node
 			{
+				assert(chooseptr->sizeb ==1);
+				assert(chooseptr->sizeb>=0);
+				printf("Number2\n");
 				table_b * curr = chooseptr->topBlocks;//temp store to be linked later
 				newBlock->start = curr->end;//newBlock start == end of the first node;
 				assert(newBlock->start!=NULL);
-				assert(newBLock->start == curr->end);
+				assert(newBlock->start == curr->end);
 				zeroOut(block_size,newBlock->start);//zero out memory up to the blocksize
 				newBlock->size = block_size;//store block size 
 				assert(newBlock->size >0);
-				newBlock->end = (char*)newBlock->start + size;//store the end for further calc
+				newBlock->end =newBlock->start + size;//store the end for further calc
 				assert(newBlock->end !=NULL);
 				newBlock->next = curr;// link newBlock to current top
-				topBlocks = newBlock;//update top to point to new top
+				chooseptr->topBlocks = newBlock;//update top to point to new top
+				chooseptr->remaining -=block_size;
+				chooseptr->sizeb++;
 				result = newBlock->start;
 			}
 			else
 			{
+				printf("Number3\n");
 				table_b* curr = chooseptr->topBlocks;
 				table_b* after = curr->next;
-				r_size_t diff = 0;
+				int diff = 0;
 				if(curr!=NULL && after !=NULL)
 				{
-					diff = (char*)curr->start-(char*) after->end;
+					diff = curr->start-after->end;
+					printf("diff1:%d", diff);
 				}
 
 				while((curr!=NULL && after!=NULL) && block_size>diff)
 				{
 					curr = curr->next;
 					after = after->next;
-					diff = (char*)curr->start-(char*) after->end;
+					diff = curr->start-after->end;
+					printf("diff:%d", diff);
 				}
-				if((curr!=NULL && after == NULL) && (block_size<((char*)chooseptr->end-(char*)curr->end)))//if at the end of the list and remaining memory can store block
+				if((curr!=NULL && after==NULL) && (block_size<=chooseptr->start+chooseptr->size))//if at the end of the list and remaining memory can store block
 				{
+					printf("END TAIL\n");
 					assert(curr!=NULL);
 					table_b * temp = curr;
 					newBlock->start = curr->end;
@@ -161,15 +171,16 @@ void *ralloc(r_size_t block_size)
 					zeroOut(block_size, newBlock->start);
 					newBlock->size = block_size;
 					assert(newBlock->size >0);
-					newBlock->end = (char*)newBlock->start + size;
+					newBlock->end =newBlock->start + size;
 					assert(newBlock->end !=NULL);
-					assert(newBlock->end<=((char*)chooseptr-(char*)curr->end));
 					newBlock->next = temp;
-					topBlocks = newBlock;
+					chooseptr->topBlocks = newBlock;
+					chooseptr->remaining -=block_size;
 					result = newBlock->start;
 				}
 				else if((curr!=NULL && after!=NULL) && (block_size<=diff))//if there is gap big enough to store block do so
 				{
+					printf("GAP INSERT\n");
 
 					assert(diff>0);
 					assert(curr !=NULL);
@@ -181,14 +192,16 @@ void *ralloc(r_size_t block_size)
 					zeroOut(block_size,newBlock->start);
 					newBlock->size = block_size;
 					assert(newBlock->size >0);
-					newBlock->end = (char*)newBlock->start + size;
+					newBlock->end =newBlock->start + size;
 					assert(newBlock->end !=NULL);
-					assert(newBlock->end<=diff);
+					assert(newBlock->end<=after->start);
 					newBlock->next = after;
 					curr->next = newBlock;
+					chooseptr->remaining -=block_size;
 					result = newBlock->start;
 
 				}
+				
 
 			}
 			return result;
@@ -218,86 +231,71 @@ r_size_t rsize(void *block_ptr)
 Boolean rfree(void *block_ptr)
 {
 	Boolean result = false;
-	Boolean resulta = false;
-	table_b * curr = chooseptr->topBlocks;
+	table_b * curr = chooseptr->topBlocks;//starts at the topBlocks
 	table_b * prev = NULL;
 
-	while(curr != NULL && (block_ptr!= curr->start))
+	while(curr != NULL && (block_ptr!= curr->start))//traverses the linked list till the end
 	{
 		prev = curr;
 		curr = curr->next;
 	}
-	if((curr !=NULL&& prev ==NULL) && (chooseptr->topBlocks == block_ptr))//if the topBlocks is aleady the block_ptr no prev so change top and free curr
+	if((chooseptr->topBlocks)->start == block_ptr)//if the topBlocks is aleady the block_ptr no prev so change top and free curr
 	{
-		resulta = addFree(curr);
-		if(resulta)
-		{
 			chooseptr->topBlocks = curr->next;
-			free(curr->start);
+			chooseptr->remaining+=curr->size;
 			free(curr);
-		}
+			result = true;
 	}
 	else if((curr!=NULL && prev!=NULL)&&(block_ptr== curr->start) )//when we find the buffer we want to delete
 	{
-		resulta = addFree(curr);
-		if(resulta)
-		{
+
 			prev = curr->next;//takes previous node from block list and links around current node
 			//assert(prev = curr->next);//checks to see if linked properly.
-			free(curr->start);
+			chooseptr->remaining+=curr->size;
 			free(curr);//free's the malloced memory/Node
 			result = true;//successfully  freed block of memory.
-		}
 		
 	}
+
 	return result;
 
 }
 void rdestroy(const char *region_name)
 {
-	table_r *curr = topregion;
-	table_r *prev = NULL;
-	Boolean resultf = false;
-	Boolean resultb = false;
-	assert(curr!=NULL);
-	assert(strcmp(region_name,"")!=0);
-	while(curr != NULL && (strcmp(region_name, curr->name)!=0))
+	Boolean blockList = false;
+	table_r curr = topregion;
+	table_r prev = NULL;
+	while(curr!=NULL && strcmp(region_name, curr->name)!=0)
 	{
+		prev = curr;
 		curr = curr->next;
 	}
-	if((curr!=NULL && prev == NULL) && (strcmp(region_name, topregion->name)==0))// beginning and one item
+	if(topregion->name == region_name)
 	{
-		assert(curr!=NULL);
-		assert(prev==NULL);
-		assert(strcmp(region_name, curr->name)==0);
-		resultf = destroyFree(topregion->topFree);//frees up the free list
-		resultb = destroyBlocks(topregion->topBlocks);//frees up the block list
-		if(resultf && resultb)
+		blockList = destroyBlocks(topregion->topBlocks);
+		if(blockList)
 		{
-			assert(strcmp(region_name, curr->name)==0);
-			table_r * temp = curr->next;//temporarily stores next node;
-			topregion = temp;
-			printf("DESTROYING REGION: %s\n", curr->name);
-			free(curr);
+			table_r *after = topregion->next;
+			free(topregion->start);
+			free(topregion);
+			topregion = after;
+			chooseptr = NULL;
 		}
-	}
-	else if ((curr!=NULL&& prev!=NULL) && (strcmp(region_name, curr->name)==0))
-	{
-		assert(curr!=NULL);
-		assert(prev!=NULL);
-		assert(strcmp(region_name, curr->name)==0);
-		resultf = destroyFree(topregion->topFree);//frees up the free list
-		resultb = destroyBlocks(topregion->topBlocks);//frees up the block list
-		if(resultf && resultb)
-		{
-			assert(strcmp(region_name, curr->name)==0);
-			table_r * temp = curr->next;
-			prev = temp;
-			printf("DESTROYING REGION: %s\n", curr->name);
-			free(curr);
-		}
-	}
 
+
+	}
+	else if((curr !=NULL && prev!=NULL) && strcmp(region_name, curr->name)==0)
+	{
+		blockList = destroyBlocks(curr->topBlocks);
+		if(blockList)
+		{
+			free(curr->start);
+			prev = curr->next;
+			chooseptr = NULL;
+			free(curr);
+		}
+		
+	}
 
 }
 void rdump()
@@ -340,12 +338,13 @@ Boolean destroyBlocks(table_b * top)
 	}
 	return result;
 }
-void zeroOut(r_size_t size, char * start)
+
+void zeroOut(r_size_t size,unsigned char * start)
 {
 	assert(size>0);
 	assert(start!=NULL);
-	char *zeroPointer = start;
-	for(int i =0;i<block_size;i++)
+	unsigned char *zeroPointer = start;
+	for(int i =0;i<size;i++)
 	{
 		zeroPointer = 0;
 		zeroPointer+=1;
