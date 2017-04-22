@@ -146,11 +146,11 @@ void *ralloc(r_size_t block_size)
 				printf("Number3\n");
 				table_b* curr = chooseptr->topBlocks;
 				table_b* after = curr->next;
-				int diff = 0;
+				unsigned int diff = 0;
 				if(curr!=NULL && after !=NULL)
 				{
 					diff = curr->start-after->end;
-					printf("diff1:%d", diff);
+					printf("diff1:%u\n", diff);
 				}
 
 				while((curr!=NULL && after!=NULL) && block_size>diff)
@@ -158,24 +158,30 @@ void *ralloc(r_size_t block_size)
 					curr = curr->next;
 					after = after->next;
 					diff = curr->start-after->end;
-					printf("diff:%d", diff);
+					printf("NODE SIZE: %d\n", curr->size);
+					printf("diff:%u\n", diff);
 				}
-				if((curr!=NULL && after==NULL) && (block_size<=chooseptr->start+chooseptr->size))//if at the end of the list and remaining memory can store block
+				if((curr!=NULL && after==NULL))//if at the end of the list and remaining memory can store block
 				{
-					printf("END TAIL\n");
-					assert(curr!=NULL);
-					table_b * temp = curr;
-					newBlock->start = curr->end;
-					assert(newBlock->start !=NULL);
-					assert(newBlock->start == curr->end);
-					zeroOut(block_size, newBlock->start);
-					newBlock->size = block_size;
-					assert(newBlock->size >0);
-					newBlock->end =newBlock->start + size;
-					assert(newBlock->end !=NULL);
-					newBlock->next = temp;
-					chooseptr->topBlocks = newBlock;
-					chooseptr->remaining -=block_size;
+					unsigned int endDiff = chooseptr->end -curr->end;
+					if(block_size<endDiff)
+					{
+						printf("END TAIL\n");
+						assert(curr!=NULL);
+						table_b * temp = curr;
+						newBlock->start = curr->end;
+						assert(newBlock->start !=NULL);
+						assert(newBlock->start == curr->end);
+						zeroOut(block_size, newBlock->start);
+						newBlock->size = block_size;
+						assert(newBlock->size >0);
+						newBlock->end =newBlock->start + size;
+						assert(newBlock->end !=NULL);
+						newBlock->next = temp;
+						chooseptr->topBlocks = newBlock;
+						chooseptr->remaining -=block_size;
+					}
+					
 					result = newBlock->start;
 				}
 				else if((curr!=NULL && after!=NULL) && (block_size<=diff))//if there is gap big enough to store block do so
@@ -263,8 +269,8 @@ Boolean rfree(void *block_ptr)
 void rdestroy(const char *region_name)
 {
 	Boolean blockList = false;
-	table_r curr = topregion;
-	table_r prev = NULL;
+	table_r *curr = topregion;
+	table_r *prev = NULL;
 	while(curr!=NULL && strcmp(region_name, curr->name)!=0)
 	{
 		prev = curr;
@@ -300,7 +306,22 @@ void rdestroy(const char *region_name)
 }
 void rdump()
 {
-	
+	table_r * curr = topregion;
+	assert(curr!=NULL);
+	while(curr!=NULL)
+	{
+		assert(strlen(curr->name)!=0);
+		printf("REGION NAME: %s\n", curr->name);
+		table_b * currB = curr->topBlocks;
+		while(currB!=NULL)
+		{
+			printf("BLOCK SIZE: %d, ALLOCATED: %p\n",currB->size, currB->start);
+			currB= currB->next;
+		}
+		printf("FREE SPACE LEFT IN REGION: %d\n", chooseptr->remaining/chooseptr->size);
+		curr = curr->next;
+	}
+
 }
 r_size_t roundup(r_size_t size)
 {
